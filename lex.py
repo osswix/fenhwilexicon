@@ -16,8 +16,9 @@ command_list = {
 	"defsearch": "alias: 'ds', search for a definition",
 	"search": "alias: 's', search for a word and definition combo",
 	"remove": "alias: 'r', removes a word, definition or link",
-	"edit": "alias: 'e' edits a word, definition or link",
-	"info": " made by osswix and bur, version 　六兰"
+	"edit": "alias: 'e', edits a word, definition or link",
+	"hanjisearch": "alias: 'hs', search for a word by kanji",
+	"info": " made by osswix and bur, version 　八兰"
 }
 db = os.path.abspath("lex.db")
 #link to the database location
@@ -90,6 +91,18 @@ while not exit:
 		search = input("Enter your search query: ")
 		results = _("SELECT * FROM Words WHERE Roman LIKE ?", ("%{0}%".format(search),))
 		print("\t{0:5s}\t{1:10s}\t{2:25s}\t{3}".format("UWID", "Hanji", "Hangul", "Roman"))
+		results = sorted(results, key=lambda x: x[1])
+		for result in results:
+			print("\t{0:5s}\t{1:10s}\t{2:25s}\t{3}".format(str(result[0]), result[2], result[3], result[1]))
+
+
+	#searches in words for the hanji
+	elif command == "hanjisearch" or command == "hs":
+		# Search for hanji
+		search = input("Enter your search query: ")
+		results = _("SELECT * FROM Words WHERE Hanja LIKE?", ("%{0}%".format(search),))
+		print("\t{0:5s}\t{1:10s}\t{2:25s}\t{3}".format("UWID", "Hanji", "Hangul", "Roman"))
+		results = sorted(results, key=lambda x: x[1])
 		for result in results:
 			print("\t{0:5s}\t{1:10s}\t{2:25s}\t{3}".format(str(result[0]), result[2], result[3], result[1]))
 
@@ -121,6 +134,7 @@ while not exit:
 		# Search for definitions
 		search = input("Enter your search query: ")
 		results = _("SELECT * FROM Definitions WHERE Definition LIKE ?", ("%{0}%".format(search),))
+		results = sorted(results, key=lambda x: x[1])
 		print("\t{0:5s}\t\t{1}".format("UDID", "Definition"))
 		for result in results:
 			print("\t{0:5s}\t\t{1}".format(str(result[0]), result[1]))
@@ -133,6 +147,20 @@ while not exit:
 		udid = input("Enter the definition ID: ")
 		_("INSERT INTO Link('F_UWID', 'F_UDID') Values(?, ?)", (uwid, udid))
 
+	#allows you to link multiple times without restarting
+	elif command == "multidef" or command =="md" or command == "link" or command =="++l":
+		# Creates multiple links
+		stop = None
+		while not stop:
+			uwid = input("Enter the word ID to define, or s, stop, q or quit to stop: ")
+			if uwid == "s" or uwid == "stop" or uwid == "q" or uwid == "quit":
+				stop = "s"
+				print("returning")
+			else:
+				udid = input("Enter the definition ID: ")
+				_("INSERT INTO Link('F_UWID', 'F_UDID') Values(?, ?)", (uwid, udid))
+				print("Link added")
+
 
 	#initiates search
 	elif command == "search" or command == "s":
@@ -141,11 +169,13 @@ while not exit:
 
 		#tests what to use for search
 		while not word_or_def:
-			i = input("Search by word [w] or definition [d]: ").lower()
+			i = input("Search by word [w] or definition [d] or hanji [h] : ").lower()
 			if i == "w" or i == "word":
 				word_or_def = "word"
 			elif i == "d" or i == "definition" or i == "def":
 				word_or_def = "def"
+			elif i == "h" or i == "hanji" or i == "han":
+				word_or_def = "han"
 			elif i == "back" or i == "b":
 				word_or_def = "back"
 			else:
@@ -156,6 +186,7 @@ while not exit:
 			# Output Words that match roman query with definitions
 			search = input("Enter your search query: ")
 			results = _("SELECT * FROM Words WHERE Roman LIKE ?", ("%{0}%".format(search),))
+			results = sorted(results, key=lambda x: x[1])
 			print("\t{0:25s}\t{1:10}\t{2}".format("Hangul","Hanji","roman"))
 			for result in results:
 				ids = [x[0] for x in _("SELECT F_UDID FROM Link WHERE F_UWID IS ?", (result[0],))]
@@ -166,11 +197,29 @@ while not exit:
 					else:
 						print("\t{0:25s}\t{2:10s}\t{1}".format("", definition, ""))
 
+		#searches by hanji
+		elif word_or_def == "han":
+			# Output Words that mach hanji query with definitions
+			search = input("Enter your search query: ")
+			results = _("SELECT * FROM Words WHERE Hanja LIKE ?", ("%{0}%".format(search),))
+			results = sorted(results, key=lambda x: x[1])
+			print("\t{0:25s}\t{1:10}\t{2}".format("Hangul","Hanji","roman"))
+			for result in results:
+				ids = [x[0] for x in _("SELECT F_UDID FROM Link WHERE F_UWID IS ?", (result[0],))]
+				definitions = [_("SELECT Definition FROM Definitions WHERE UDID IS ?", (id,))[0][0] for id in ids]
+				for definition in definitions:
+					if definition == definitions[0]:
+						print("\t{0:25s}\t{2:10s}\t{1}".format(result[3], definition, result[2]))
+					else:
+						print("\t{0:25s}\t{2:10s}\t{1}".format("", definition, ""))
+
+
 		#searches by definition
 		elif word_or_def == "def":
 			# Output Words that match definition query with definitions
 			search = input("Enter your search query: ")
 			results = _("SELECT * FROM Definitions WHERE Definition LIKE ?", ("%{0}%".format(search),))
+			results = sorted(results, key=lambda x: x[1])
 			print("\t{0:25s}\t{1:10s}\t{2}".format("Hangul","Hanji","Roman"))
 			for result in results:
 				ids = [x[0] for x in _("SELECT F_UWID FROM Link WHERE F_UDID IS ?", (result[0],))]
@@ -181,7 +230,7 @@ while not exit:
 
 		#quits the search
 		else:
-			print("returning")
+			print("returningsearch")
 
 
 	#initiates deletion part
@@ -316,8 +365,13 @@ while not exit:
 #project finished by Osswix (Wilco Jacobs)
 #project used by Osswix (Wilco Jacobs)
 #versions beforehand do not have any form of update
-#version 　六兰
+#version 　八兰
 #note that the version is day of the month + month in fenhwi itself.
 #changelog from 一兰 to 六兰
 #replaced hanja with hanji (spelling correction)
 #added ways to quickly add multiple words.
+#added sorting to "ws"
+#changelog from 六兰 to 八兰
+#added feature to search for words by hanji (hanjisearch or hs)
+#added feature to use hanji in the search function (search or s > h, han or hanji)
+#added feature to link multiple words in a row
