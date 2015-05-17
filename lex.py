@@ -13,6 +13,7 @@ command_list = {
 	"addadddef": "alias: '++d', add a multitude definations to the lexicon",
 	"define": "alias: 'd', 'link', link a word with a definintion",
 	"wordsearch": "alias: 'ws', search for a word",
+	"hanjisearch": "alias: 'hs', search for a word by hanji",
 	"defsearch": "alias: 'ds', search for a definition",
 	"search": "alias: 's', search for a word and definition combo",
 	"remove": "alias: 'r', removes a word, definition or link",
